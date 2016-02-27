@@ -12,6 +12,9 @@ from fuse import FUSE, FuseOSError, Operations
 class Passthrough(Operations):
     def __init__(self, root):
         self.root = root
+	#check if file allocation table exits, if not create one
+	if os.path.isfile('fat.bin') != True:
+		print 'create fat'
 
     # Helpers
     # =======

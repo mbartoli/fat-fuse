@@ -1,2 +1,2 @@
-fusermount -u fat
-rm -rf fat
+fusermount -u test
+# rm -rf fat

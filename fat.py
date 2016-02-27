@@ -39,12 +39,14 @@ class Passthrough(Operations):
         return os.chown(full_path, uid, gid)
 
     def getattr(self, path, fh=None):
+	print "getattr"
         full_path = self._full_path(path)
         st = os.lstat(full_path)
         return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                      'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
     def readdir(self, path, fh):
+	print "readdir"
         full_path = self._full_path(path)
 
         dirents = ['.', '..']
@@ -65,10 +67,12 @@ class Passthrough(Operations):
         return os.mknod(self._full_path(path), mode, dev)
 
     def rmdir(self, path):
+	print "rmdir" 
         full_path = self._full_path(path)
         return os.rmdir(full_path)
 
     def mkdir(self, path, mode):
+	print "mkdir"
         return os.mkdir(self._full_path(path), mode)
 
     def statfs(self, path):
@@ -85,6 +89,7 @@ class Passthrough(Operations):
         return os.symlink(name, self._full_path(target))
 
     def rename(self, old, new):
+	print "rename" 
         return os.rename(self._full_path(old), self._full_path(new))
 
     def link(self, target, name):
@@ -97,22 +102,27 @@ class Passthrough(Operations):
     # ============
 
     def open(self, path, flags):
+	print "open" 
         full_path = self._full_path(path)
         return os.open(full_path, flags)
 
     def create(self, path, mode, fi=None):
+	print "create" 
         full_path = self._full_path(path)
         return os.open(full_path, os.O_WRONLY | os.O_CREAT, mode)
 
     def read(self, path, length, offset, fh):
+	print "read" 
         os.lseek(fh, offset, os.SEEK_SET)
         return os.read(fh, length)
 
     def write(self, path, buf, offset, fh):
+	print "write" 
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, buf)
 
     def truncate(self, path, length, fh=None):
+	print "truncate" 
         full_path = self._full_path(path)
         with open(full_path, 'r+') as f:
             f.truncate(length)

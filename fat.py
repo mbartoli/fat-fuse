@@ -5,16 +5,48 @@ from __future__ import with_statement
 import os
 import sys
 import errno
+import cPickle as pickle
+import pprint
 
 from fuse import FUSE, FuseOSError, Operations
 
+fatpath = 'fat_disk.pkl'
+fat_disk_size = 10485760 #10MB
+block_size = 4096
 
 class Passthrough(Operations):
     def __init__(self, root):
         self.root = root
-	#check if file allocation table exits, if not create one
-	if os.path.isfile('fat.bin') != True:
-		print 'create fat'
+
+	#check if valid block size
+        if fat_disk_size % block_size != 0:
+		raise ValueError('Bad block size')	
+
+	#if the file allocation table doesn't exit, create one
+	if os.path.isfile(fatpath) != True:
+		"""print 'create fat'
+		with open(fatpath, 'wb') as f:
+			#preallocate fat_disk_size in the file allcoation table
+			f.seek(fat_disk_size-1)
+			f.write("\0")
+			f.close()"""
+		table = {}
+		for i in range(0, 3):#fat_disk_size/block_size):
+			table[i] = [0]*4096	
+		pkl_file = open(fatpath,'wb')
+		pickle.dump(table, pkl_file)
+		pkl_file.close()
+	print os.stat(fatpath).st_size
+	pkl_file = open(fatpath,'rb')
+	data1 = pickle.load(pkl_file) 
+	#pprint.pprint(data1)
+	pkl_file.close()
+	if os.path.isfile(fatpath): #debug
+		print 'success!'
+	else:
+		print 'you screwed up, no fat'
+
+
 
     # Helpers
     # =======

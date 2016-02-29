@@ -37,7 +37,7 @@ class Passthrough(Operations):
 	if os.path.isfile(disk_path) != True:
 		table = {}
 		for i in range(0, fat_disk_size/block_size):#fat_disk_size/block_size):
-			table[i] = [00]*4096	
+			table[i] = ['00']*block_size	
 		pkl_file = open(disk_path,'wb')
 		pickle.dump(table, pkl_file)
 		pkl_file.close()
@@ -57,8 +57,10 @@ class Passthrough(Operations):
 		pkl_file = open(superblock_path,'wb')
 		pickle.dump(table, pkl_file)
 		pkl_file.close()
+		#.... = [file_type, size, file_name, first_block
                 #table['.'] = [1]
                 #table['..'] = [2]
+		#create
   
 
 	if debug:
@@ -112,6 +114,15 @@ class Passthrough(Operations):
 	free_bytes = len(free_list)*block_size
 	return free_bytes
 
+    def _get_file_size(self, path):
+	return 0
+
+    def _get_file_mode(self, path):
+	return 0
+
+    def _get_hard_links(self, path):
+	return 1
+
     # Filesystem methods
     # ==================
 
@@ -132,11 +143,32 @@ class Passthrough(Operations):
 	if debug:
 		print "getattr"
         full_path = self._full_path(path)
-	print path
-	print full_path
-        st = os.lstat(full_path)
-        data = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-                     'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+	print 'path:       '+path
+	print 'full path:  ' +full_path
+	#superblock[full/path] = [file_type, size, file_name, first_block
+        pkl_file = open(superblock_path, 'rb')
+        superblock = pickle.load(pkl_file)
+        #file_info = superblock[path] #get info of file from superblock
+        #starting_block = file_info[0]
+        pkl_file.close()
+	
+
+	c_st_atime = 1456738105
+	c_st_ctime = 1456615173
+	c_st_gid = 1000
+	c_st_mode = self._get_file_mode(path) 
+        c_st_mtime = 1456615173
+	c_st_nlink = self._get_hard_links(path)
+        c_st_size = self._get_file_size(path)
+	c_st_uid = 1000
+
+	st = os.lstat(full_path)
+	data = {}
+	for key in ('st_atime', 'st_ctime', 'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'):
+		data[key] = getattr(st, key)
+	print data
+        #data = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
+        #             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 	#print data
 	return data
 

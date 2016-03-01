@@ -25,8 +25,8 @@ block_size = 4096
 superblock_path = 'superblock.pkl'
 max_num_of_files = fat_disk_size / block_size
 free_list_path = 'free_list.pkl' 
-folder_enc = 0
-file_enc = 1
+folder_enc = 16893
+file_enc = 33204
 
 class Passthrough(Operations):
     def __init__(self, root):
@@ -56,7 +56,7 @@ class Passthrough(Operations):
 
 	#if the superblock doesn't exist, create it
 	if os.path.isfile(superblock_path) != True: 
-		table = [[]]
+		table = [[folder_enc, block_size, '/', 0]]#[[]]
 		pkl_file = open(superblock_path,'wb')
 		pickle.dump(table, pkl_file)
 		pkl_file.close()
@@ -68,8 +68,9 @@ class Passthrough(Operations):
 	#if the freelist doesn't exist, create it 
 	if os.path.isfile(free_list_path) != True:
 		freelist = []
-		for i in range(0, fat_disk_size/block_size):
+		for i in range(1, fat_disk_size/block_size): #start at 1 bc / entry
 			freelist.append(i)
+		print freelist
 		pkl_file = open(free_list_path,'wb')
 		pickle.dump(freelist, pkl_file)
 		pkl_file.close()
@@ -109,7 +110,7 @@ class Passthrough(Operations):
 	pkl_file.close()
 	return free_list
 	'''
-        pkl_file = open(free_list_path,'wb')
+        pkl_file = open(free_list_path,'rb')
         free_list = pickle.load(pkl_file)
         pkl_file.close()
 	return free_list
@@ -137,27 +138,39 @@ class Passthrough(Operations):
         # 	partial = partial[1:] #filename
 	pkl_file = open(superblock_path, 'rb')
         superblock = pickle.load(pkl_file)
+	print 'fz path'
+	print path
 	try:
-	        file_info = superblock[path]
-        	file_size = file_info[1]
+		file_size = 0
+		for entry in superblock:
+			if entry[2] == path:				
+	        		file_info = superblock[path]
+        			file_size = file_info[1]
 	except:
+		file_size = 0
 		pass
         pkl_file.close()
-        #return file_size
-	return 0
+        return file_size
+	#return 0
 
     def _get_file_mode(self, path):
         #if partial.startswith("/"):
         #        partial = partial[1:] #filename
         pkl_file = open(superblock_path, 'rb')
         superblock = pickle.load(pkl_file)
+	print 'mode path'
+	print path
+	print superblock
         try:
 		file_info = superblock[path]
-	        file_type = file_info[0] 
+	        file_type = file_info[0]
+		print 'type:'
+		print file_type
+		pkl_file.close() 
+		return file_type
 	except:
+		pkl_file.close()
 		pass
-        pkl_file.close()
-        #return file_type
         return 0
 
     def _get_hard_links(self, path):
@@ -171,13 +184,13 @@ class Passthrough(Operations):
         if not os.access(full_path, mode):
             raise FuseOSError(errno.EACCES)
 
-    def chmod(self, path, mode):
+    '''def chmod(self, path, mode):
         full_path = self._full_path(path)
         return os.chmod(full_path, mode)
 
     def chown(self, path, uid, gid):
         full_path = self._full_path(path)
-        return os.chown(full_path, uid, gid)
+        return os.chown(full_path, uid, gid)'''
 
     def getattr(self, path, fh=None):
 	if debug:
@@ -191,35 +204,52 @@ class Passthrough(Operations):
         #file_info = superblock[path] #get info of file from superblock
         #starting_block = file_info[0]
         pkl_file.close()
-	data = {
+	data = {}
+	data1 = {
 		"st_atime" : 1456738105,
 		"st_ctime" : 1456615173,
 		"st_gid" : 1000,
 		"st_mode" : self._get_file_mode(path),
         	"st_mtime" : 1456615173,
-		"c_st_nlink" : self._get_hard_links(path),
+		"st_nlink" : self._get_hard_links(path),
         	"st_size" : self._get_file_size(path),
 		"st_uid" : 1000,
 	}
 	st = os.lstat(full_path)
-	data1 = {}
 	for key in ('st_atime', 'st_ctime', 'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'):
 		data[key] = getattr(st, key)
-	print data1
+	if debug:
+		print 'data1'
+		print data1
         #data = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
         #             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
-	#print data
+	print 'comparision'
+	print data
+	print data1
 	return data
 
     def readdir(self, path, fh):
 	if debug:
 		print "readdir"
         full_path = self._full_path(path)
+	print "fp: "+full_path
 
         dirents = ['.', '..']
         if os.path.isdir(full_path):
             dirents.extend(os.listdir(full_path))
 	print dirents
+
+        superblock_pkl = open(superblock_path,'rb')
+        superblock = pickle.load(superblock_pkl)
+        superblock_pkl.close()
+
+	'''dirents = ['.', '..']
+	for key in superblock:
+		print "key: "
+		print key[2]
+		dirents.extend(str(key[2]))'''
+	print "fd"
+	print dirents	
         for r in dirents:
             yield r
 
@@ -243,18 +273,26 @@ class Passthrough(Operations):
     def mkdir(self, path, mode):
 	if debug:
 		print "mkdir"
-        superblock_pkl = open(superblock_path,'wb')
-        superblock = pickle.load(superblock_pkl)
+        superblock_pkl = open(superblock_path,'rb')
+	old_superblock = pickle.load(superblock_pkl)
+	superblock_pkl.close()
 
-	freelist = self._get_free_list()
-	freelist = freelist[1:]
-	folder_block = freelist[0]	
+	old_freelist = self._get_free_list()
+	freelist = old_freelist[1:]
+	folder_block = old_freelist[0]	
+	if debug:
+		print "folder block:  "+str(folder_block)
 
         freelist_pkl = open(free_list_path,'wb')
         pickle.dump(freelist, freelist_pkl)
 	
-	superblock[folder_block] = [folder_enc, block_size, path, folder_block]
+	superblock = old_superblock	
+	if debug:
+		print superblock
+	superblock.append([folder_enc, block_size, path, folder_block])
+	superblock_pkl = open(superblock_path,'wb')
 	pickle.dump(superblock, superblock_pkl)
+
 	# ignore block table
 	# ignore disk	
 

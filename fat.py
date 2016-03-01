@@ -4,6 +4,11 @@
 @class		CS137 - File Systems 
 @author		Mike Bartoli
 @email		michael.bartoli@pomona.edu
+
+External resources used:
+Linux man pages
+Korokithakis blog post on writing a sample FUSE filesystem 
+with fusepy https://www.stavros.io/posts/python-fuse-filesystem/
 '''
 #!/usr/bin/env python
 

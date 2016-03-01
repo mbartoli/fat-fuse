@@ -3,7 +3,7 @@
 @filename	fat-fuse.py
 @class		CS137 - File Systems 
 @author		Mike Bartoli
-@email		bartolimichael@gmail.com
+@email		michael.bartoli@pomona.edu
 '''
 #!/usr/bin/env python
 

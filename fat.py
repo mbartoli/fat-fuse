@@ -196,6 +196,7 @@ class Passthrough(Operations):
                 "st_atime" : time(),
 	}
 
+	print 'getattr path: ' + path
         for entry in superblock:
 	        if entry[2] == path:
 			return data
@@ -209,14 +210,31 @@ class Passthrough(Operations):
         superblock_pkl = open(superblock_path,'rb')
         superblock = pickle.load(superblock_pkl)
         superblock_pkl.close()
-
+	print "read path: "+path
 	dirents = ['.', '..']
 	for key in superblock:
 		raw_path = key[2]
-		relative_path = False
-		if raw_path.startswith(path) and raw_path != path:
-			relative_path = raw_path[len(path)+1:] 
-			dirents.append(relative_path)
+		print 'rp:: '+raw_path
+		if path == '/':
+			rel_path = raw_path.split('/')
+			print rel_path
+			if len(rel_path) == 2 and rel_path != ['','']:
+				dirents.append(rel_path[1])
+		elif raw_path.startswith(path) and raw_path != path:
+			rel_path = raw_path[len(path):]
+			print 'rel path ' + rel_path
+			sp_rel_path = rel_path.split('/')
+			print 'pre sp: '
+			print sp_rel_path
+			if len(sp_rel_path) == 2:
+				print "sp " +  sp_rel_path[0]
+				dirents.append(sp_rel_path[1])
+						
+
+		"""if raw_path.startswith(path) and raw_path != path and len(raw_path[len(path)].split('/'))==2:
+			relative_path = raw_path[len(path):] 
+			relative_path = relative_path.split('/')[-1]
+			dirents.append(relative_path)"""
         for r in dirents:
             yield r
 

@@ -16,6 +16,7 @@ from __future__ import with_statement
 from time import time
 from errno import ENOENT
 
+import sys
 import os
 import sys
 import errno
@@ -36,22 +37,12 @@ folder_enc = 16893
 file_enc = 33204
 
 class Passthrough(Operations):
-    def __init__(self, root, mountpoint):
-        self.root = root
+    def __init__(self, mountpoint):
 	self.mountpoint = mountpoint
 
 	#check if valid block size
         if fat_disk_size % 512 != 0:
 		raise ValueError('Bad block size')	
-
-	#if the disk doesn't exit, create one
-	if os.path.isfile(disk_path) != True:
-		table = {}
-		for i in range(0, fat_disk_size/block_size):
-			table[i] = ['00']*block_size	
-		pkl_file = open(disk_path,'wb')
-		pickle.dump(table, pkl_file)
-		pkl_file.close()
 	
 	#if the block table doesn't exist, create it
         if os.path.isfile(block_table_path) != True:
@@ -59,7 +50,7 @@ class Passthrough(Operations):
                 for i in range(0, fat_disk_size/block_size):
                         table[i] = 0
                 pkl_file = open(block_table_path,'wb')
-                pickle.dump(table, pkl_file)
+                pickle.dump(table, pkl_file, 2)
                 pkl_file.close()
 
 	#if the superblock doesn't exist, create it
@@ -67,7 +58,7 @@ class Passthrough(Operations):
                 # encoding is [file_type, size, file_name, first_block] 
 		table = [[folder_enc, block_size, '/', 0]]
 		pkl_file = open(superblock_path,'wb')
-		pickle.dump(table, pkl_file)
+		pickle.dump(table, pkl_file, 2)
 		pkl_file.close()
   
 	#if the freelist doesn't exist, create it 
@@ -76,17 +67,46 @@ class Passthrough(Operations):
 		for i in range(1, fat_disk_size/block_size):
 			freelist.append(i)
 		pkl_file = open(free_list_path,'wb')
-		pickle.dump(freelist, pkl_file)
+		pickle.dump(freelist, pkl_file, 2)
 		pkl_file.close()
 		
+	#if the disk doesn't exit, create one
+	if os.path.isfile(disk_path) != True:
+		"""table = {}
+		for i in range(0, fat_disk_size/block_size):
+			table[i] = ['00']*block_size	
+		pkl_file = open(disk_path,'wb')
+		pickle.dump(table, pkl_file, 2)
+		pkl_file.close()
+		disk = {}
+		free_list_file = open(free_list_path,'rb')
+		superblock_file = open(superblock_path,'rb')
+		block_table_file = open(block_table_path,'rb')
+	
+		free_list = pickle.load(free_list_file)
+		superblock = pickle.load(superblock_file)
+		block_table = pickle.load(block_table_file)
+
+		size_f = sys.getsizeof(free_list)
+		size_s = sys.getsizeof(superblock)
+		size_b = sys.getsizeof(block_table)
+		used_space = size_f + size_s + size_b
+		free_space = fat_disk_size - used_space
+
+		print free_space 		
+
+		free_list_file.close()
+		superblock_file.close()
+		block_table_file.close()"""
+
 
     # Helpers
     # =======
 
-    def _full_path(self, partial):
+    def _full_path(self, partial): #ignore
         if partial.startswith("/"):
             partial = partial[1:]
-        path = os.path.join(self.root, partial)
+        path = os.path.join(self.mountpoint, partial)#self.root
         return path
 
     def _full_mount_path(self, partial):
@@ -178,7 +198,6 @@ class Passthrough(Operations):
 	if debug:
 		print "getattr"
         full_path = self._full_path(path)
-	print path
         pkl_file = open(superblock_path, 'rb')
         superblock = pickle.load(pkl_file)
         pkl_file.close()
@@ -259,13 +278,13 @@ class Passthrough(Operations):
 		print "folder block:  "+str(folder_block)
 
         freelist_pkl = open(free_list_path,'wb')
-        pickle.dump(freelist, freelist_pkl)
+        pickle.dump(freelist, freelist_pkl, 2)
 	
 	# update the superblock
 	superblock = old_superblock	
 	superblock.append([folder_enc, block_size, path, folder_block])
 	superblock_pkl = open(superblock_path,'wb')
-	pickle.dump(superblock, superblock_pkl)
+	pickle.dump(superblock, superblock_pkl, 2)
 
 	# ignore block table
 	# ignore disk	
@@ -341,8 +360,8 @@ class Passthrough(Operations):
         return self.flush(path, fh)
 
 
-def main(mountpoint, root):
-    FUSE(Passthrough(root,mountpoint), mountpoint, nothreads=True, foreground=True)
+def main(mountpoint):
+    FUSE(Passthrough(mountpoint), mountpoint, nothreads=True, foreground=True)
 
 if __name__ == '__main__':
-    main(sys.argv[2], sys.argv[1])
+    main(sys.argv[1])

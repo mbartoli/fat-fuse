@@ -144,8 +144,6 @@ class Passthrough(Operations):
         return file_size
 
     def _get_file_mode(self, path):
-        #if partial.startswith("/"):
-        #        partial = partial[1:] #filename
         pkl_file = open(superblock_path, 'rb')
         superblock = pickle.load(pkl_file)
         try:
@@ -210,35 +208,22 @@ class Passthrough(Operations):
         superblock_pkl = open(superblock_path,'rb')
         superblock = pickle.load(superblock_pkl)
         superblock_pkl.close()
-	print "read path: "+path
 	dirents = ['.', '..']
 	for key in superblock:
 		raw_path = key[2]
-		print 'rp:: '+raw_path
 		if path == '/':
 			rel_path = raw_path.split('/')
-			print rel_path
 			if len(rel_path) == 2 and rel_path != ['','']:
 				dirents.append(rel_path[1])
 		elif raw_path.startswith(path) and raw_path != path:
 			rel_path = raw_path[len(path):]
-			print 'rel path ' + rel_path
 			sp_rel_path = rel_path.split('/')
-			print 'pre sp: '
-			print sp_rel_path
 			if len(sp_rel_path) == 2:
-				print "sp " +  sp_rel_path[0]
 				dirents.append(sp_rel_path[1])
-						
-
-		"""if raw_path.startswith(path) and raw_path != path and len(raw_path[len(path)].split('/'))==2:
-			relative_path = raw_path[len(path):] 
-			relative_path = relative_path.split('/')[-1]
-			dirents.append(relative_path)"""
         for r in dirents:
             yield r
 
-    def readlink(self, path):
+    def readlink(self, path): #ignore
 	if debug:
 		print "readlink"
         pathname = os.readlink(self._full_path(path))
@@ -248,18 +233,18 @@ class Passthrough(Operations):
         else:
             return pathname
 
-    def mknod(self, path, mode, dev):
+    def mknod(self, path, mode, dev): #ignore 
 	if debug:
 		print "mknod"
         return os.mknod(self._full_path(path), mode, dev)
 
-    def rmdir(self, path):
+    def rmdir(self, path): #ignore
 	if debug:
 		print "rmdir" 
         full_path = self._full_path(path)
         return os.rmdir(full_path)
 
-    def mkdir(self, path, mode):
+    def mkdir(self, path, mode): 
 	if debug:
 		print "mkdir"
         superblock_pkl = open(superblock_path,'rb')
@@ -298,23 +283,23 @@ class Passthrough(Operations):
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
 
-    def unlink(self, path):
+    def unlink(self, path): #ignore
         return os.unlink(self._full_path(path))
 
-    def symlink(self, name, target):
+    def symlink(self, name, target): #ignore
         return os.symlink(name, self._full_path(target))
 
-    def rename(self, old, new):
+    def rename(self, old, new): #ignore
 	if debug:
 		print "rename" 
         return os.rename(self._full_path(old), self._full_path(new))
 
-    def link(self, target, name):
+    def link(self, target, name): #ignore
 	if debug:
 		print "link"
         return os.link(self._full_path(target), self._full_path(name))
 
-    def utimens(self, path, times=None):
+    def utimens(self, path, times=None): #ignore
         return os.utime(self._full_path(path), times)
 
     # File methods (currently unimplemented) 
@@ -346,13 +331,13 @@ class Passthrough(Operations):
         with open(full_path, 'r+') as f:
             f.truncate(length)
 
-    def flush(self, path, fh):
+    def flush(self, path, fh): #ignore
         return os.fsync(fh)
 
-    def release(self, path, fh):
+    def release(self, path, fh): #ignore
         return os.close(fh)
 
-    def fsync(self, path, fdatasync, fh):
+    def fsync(self, path, fdatasync, fh): #ignore
         return self.flush(path, fh)
 
 
